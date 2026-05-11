@@ -8,7 +8,7 @@ Static site that shows a **Wednesday rotation** for a roster of names. Names com
 
 | Path | Purpose |
 |------|--------|
-| `web/` | Frontend: `index.html`, `app.js`, `reminder-modal.js`, `roster-editor.js`, `styles.css`, `api-config.js` |
+| `web/` | Frontend: `index.html`, JS/CSS, `api-config.js`, **`assets/`** (e.g. SVG icons) |
 | `sam/` | Backend: `template.yaml`, Lambdas `handlers/list-names/`, `handlers/put-roster/`, `scripts/` (seed, **`dev_http_server.py`** for local API proxy) |
 | `amplify.yml` | Writes `web/api-config.js` from **`API_BASE_URL`** and **`EDIT_ROSTER_KEY`** |
 | `samconfig.toml` | Default `sam build` / `sam deploy` options (stack name, region, profile, template path) |

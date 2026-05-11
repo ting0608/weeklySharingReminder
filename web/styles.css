@@ -371,6 +371,30 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
   border-bottom: none;
 }
 
+@keyframes roster-edit-row-blink {
+  0%,
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    background-color: rgba(0, 200, 83, 0.2);
+    box-shadow: inset 0 0 0 1px var(--fg-dim);
+  }
+}
+
+.roster-edit-row--flash {
+  animation: roster-edit-row-blink 0.5s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roster-edit-row--flash {
+    animation: none;
+    background-color: rgba(0, 200, 83, 0.15);
+    box-shadow: inset 0 0 0 1px var(--fg-dim);
+  }
+}
+
 .roster-edit-row__idx {
   color: var(--fg-dim);
   font-variant-numeric: tabular-nums;

@@ -60,7 +60,31 @@
     statusEl.classList.toggle("reminder-form__status--error", !!isError);
   }
 
-  function renderList() {
+  function scrollAndHighlightAddedRow(highlightLowerKey) {
+    if (!listEl || !highlightLowerKey) return;
+    const row = [...listEl.querySelectorAll("li.roster-edit-row")].find(
+      (li) => li.dataset.rosterLower === highlightLowerKey
+    );
+    if (!row) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+
+    const clearFlash = () => {
+      row.classList.remove("roster-edit-row--flash");
+    };
+
+    requestAnimationFrame(() => {
+      row.classList.add("roster-edit-row--flash");
+      if (reduce) {
+        window.setTimeout(clearFlash, 1400);
+      } else {
+        row.addEventListener("animationend", clearFlash, { once: true });
+      }
+    });
+  }
+
+  function renderList(highlightLowerKey) {
     if (!listEl) return;
     const sorted = sortNamesAlpha(workingNames);
     workingNames = sorted;
@@ -68,6 +92,7 @@
     sorted.forEach((name, index) => {
       const li = document.createElement("li");
       li.className = "roster-edit-row";
+      li.dataset.rosterLower = name.toLowerCase();
       const enc = encodeURIComponent(name);
       li.innerHTML = `<span class="roster-edit-row__idx">${index + 1}</span><span class="roster-edit-row__name"></span><button type="button" class="roster-edit-row__del" data-name="${enc}" aria-label="Remove">×</button>`;
       li.querySelector(".roster-edit-row__name").textContent = name;
@@ -82,6 +107,10 @@
       });
       listEl.appendChild(li);
     });
+
+    if (highlightLowerKey) {
+      requestAnimationFrame(() => scrollAndHighlightAddedRow(highlightLowerKey));
+    }
   }
 
   async function loadRosterIntoEditor() {
@@ -157,7 +186,7 @@
     }
     workingNames.push(t);
     newInput.value = "";
-    renderList();
+    renderList(lower);
     setStatus("", false);
   }
 
