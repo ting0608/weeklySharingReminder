@@ -10,3 +10,5 @@ sam/handlers/**/node_modules/
 
 # Local frontend runtime config (contains real endpoints/client IDs).
 web/api-config.js
+
+# Testing
