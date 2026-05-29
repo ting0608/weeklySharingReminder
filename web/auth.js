@@ -21,7 +21,59 @@
   const rosterEditBtn = document.getElementById("roster-edit-open");
   let mode = "signin";
   let signupAwaitingCode = false;
+  let awaitingNewPassword = false;
+  let authSession = null;
   let toastRoot = null;
+
+  function applyAuthTokens(result) {
+    if (!result?.IdToken || !result?.AccessToken) {
+      throw new Error("Login succeeded but tokens are missing.");
+    }
+    writeStoredTokens({
+      idToken: result.IdToken,
+      accessToken: result.AccessToken,
+      refreshToken: result.RefreshToken || "",
+    });
+    showToast("Login successful.", false);
+    if (typeof window.__weeklySharingReloadSchedule === "function") {
+      window.__weeklySharingReloadSchedule().catch(() => {});
+    }
+  }
+
+  function challengeHelpText(challenge) {
+    switch (challenge) {
+      case "NEW_PASSWORD_REQUIRED":
+        return "Your account must set a new password (common after admin invite). Enter a new password below and submit again.";
+      case "SMS_MFA":
+      case "SOFTWARE_TOKEN_MFA":
+        return "MFA is required for this account but this app does not support MFA yet. Disable MFA on the user in Cognito or use a non-MFA account.";
+      case "MFA_SETUP":
+        return "Cognito wants MFA setup before login. Complete MFA in the AWS Cognito console or disable MFA for this user.";
+      default:
+        return `Cognito returned challenge "${challenge}". This app only supports email + password login.`;
+    }
+  }
+
+  function handleAuthChallenge(data) {
+    const challenge = data?.ChallengeName;
+    if (!challenge) return false;
+    if (challenge === "NEW_PASSWORD_REQUIRED" && data.Session) {
+      authSession = data.Session;
+      awaitingNewPassword = true;
+      if (hintEl) {
+        hintEl.textContent =
+          "// Temporary password detected — enter a new password and submit again.";
+      }
+      if (submitBtn) submitBtn.textContent = "set_new_password";
+      setStatus(challengeHelpText(challenge), false);
+      if (passwordEl) {
+        passwordEl.value = "";
+        passwordEl.focus();
+      }
+      return true;
+    }
+    throw new Error(challengeHelpText(challenge));
+  }
 
   function cfg(key) {
     return typeof window !== "undefined" ? String(window[key] || "").trim() : "";
@@ -225,6 +277,8 @@
 
     if (mode === "signin") {
       signupAwaitingCode = false;
+      awaitingNewPassword = false;
+      authSession = null;
       submitBtn.textContent = "login";
       hintEl.textContent = "// Sign in to view the weekly sharing schedule.";
       if (codeWrapEl) codeWrapEl.hidden = true;
@@ -254,22 +308,34 @@
     const email = (emailEl?.value || "").trim();
     const password = passwordEl?.value || "";
     if (!email || !password) throw new Error("Enter email and password.");
+
+    if (awaitingNewPassword) {
+      if (!authSession) {
+        awaitingNewPassword = false;
+        throw new Error("Password reset session expired. Sign in again.");
+      }
+      const data = await cognitoRequest("RespondToAuthChallenge", {
+        ChallengeName: "NEW_PASSWORD_REQUIRED",
+        Session: authSession,
+        ChallengeResponses: {
+          USERNAME: email,
+          NEW_PASSWORD: password,
+        },
+      });
+      awaitingNewPassword = false;
+      authSession = null;
+      if (handleAuthChallenge(data)) return;
+      applyAuthTokens(data.AuthenticationResult || {});
+      setMode("signin");
+      return;
+    }
+
     const data = await cognitoRequest("InitiateAuth", {
       AuthFlow: "USER_PASSWORD_AUTH",
       AuthParameters: { USERNAME: email, PASSWORD: password },
     });
-    const result = data.AuthenticationResult || {};
-    if (!result.IdToken || !result.AccessToken)
-      throw new Error("Login succeeded but tokens are missing.");
-    writeStoredTokens({
-      idToken: result.IdToken,
-      accessToken: result.AccessToken,
-      refreshToken: result.RefreshToken || "",
-    });
-    showToast("Login successful.", false);
-    if (typeof window.__weeklySharingReloadSchedule === "function") {
-      window.__weeklySharingReloadSchedule().catch(() => {});
-    }
+    if (handleAuthChallenge(data)) return;
+    applyAuthTokens(data.AuthenticationResult || {});
   }
 
   async function doSignUp() {
@@ -359,9 +425,11 @@
       try {
         if (mode === "signin") {
           await doSignIn();
-          setGuestMode(false);
-          setStatus("", false);
-          refresh();
+          if (!awaitingNewPassword) {
+            setGuestMode(false);
+            setStatus("", false);
+            refresh();
+          }
         } else {
           const hasCode = (codeEl?.value || "").trim().length > 0;
           if (signupAwaitingCode || hasCode) await doConfirm();
