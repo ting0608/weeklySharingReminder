@@ -37,6 +37,7 @@
     return d;
   }
 
+  // Test
   function formatHolidayLabel(iso) {
     const d = parseIsoLocal(iso);
     if (!d) return iso;
@@ -59,9 +60,7 @@
   }
 
   function isFileProtocolPage() {
-    return (
-      typeof location !== "undefined" && location.protocol === "file:"
-    );
+    return typeof location !== "undefined" && location.protocol === "file:";
   }
 
   function explainFetchFailure(e) {
@@ -77,7 +76,8 @@
   }
 
   function getAuthToken() {
-    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    const auth =
+      typeof window !== "undefined" ? window.__weeklySharingAuth : null;
     if (!auth) return "";
     // custom:* attributes are typically present on ID token claims.
     if (typeof auth.getIdToken === "function") {
@@ -90,12 +90,14 @@
   }
 
   function canEditRoster() {
-    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    const auth =
+      typeof window !== "undefined" ? window.__weeklySharingAuth : null;
     return !!(auth && auth.isAdmin);
   }
 
   function getAdminClaimForDebug() {
-    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    const auth =
+      typeof window !== "undefined" ? window.__weeklySharingAuth : null;
     if (!auth || typeof auth.getIdToken !== "function") return "";
     const jwt = auth.getIdToken();
     if (!jwt || typeof jwt !== "string") return "";
@@ -122,7 +124,9 @@
       seen.add(t.toLowerCase());
       out.push(t);
     }
-    return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+    return out.sort((a, b) =>
+      a.localeCompare(b, "en", { sensitivity: "base" }),
+    );
   }
 
   function setStatus(text, isError) {
@@ -134,12 +138,17 @@
   function scrollAndHighlightAddedRow(highlightLowerKey) {
     if (!listEl || !highlightLowerKey) return;
     const row = [...listEl.querySelectorAll("li.roster-edit-row")].find(
-      (li) => li.dataset.rosterLower === highlightLowerKey
+      (li) => li.dataset.rosterLower === highlightLowerKey,
     );
     if (!row) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    row.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    row.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "nearest",
+    });
 
     const clearFlash = () => {
       row.classList.remove("roster-edit-row--flash");
@@ -180,7 +189,9 @@
     });
 
     if (highlightLowerKey) {
-      requestAnimationFrame(() => scrollAndHighlightAddedRow(highlightLowerKey));
+      requestAnimationFrame(() =>
+        scrollAndHighlightAddedRow(highlightLowerKey),
+      );
     }
   }
 
@@ -207,7 +218,7 @@
           workingHolidays = workingHolidays.filter((h) => h !== iso);
           renderHolidayList();
           setStatus("", false);
-        }
+        },
       );
       holidayListEl.appendChild(li);
     });
@@ -225,7 +236,7 @@
     if (isFileProtocolPage()) {
       setStatus(
         "Cannot load roster from file:// — serve the web folder over http(s), e.g. python3 -m http.server 8080 --directory web then open http://localhost:8080/",
-        true
+        true,
       );
       workingNames = [];
       workingHolidays = [];
@@ -246,7 +257,7 @@
         : [];
       workingNames = sortNamesAlpha(workingNames);
       workingHolidays = normalizeHolidayIsos(
-        Array.isArray(data.holidays) ? data.holidays : []
+        Array.isArray(data.holidays) ? data.holidays : [],
       );
       renderList();
       renderHolidayList();
@@ -255,7 +266,7 @@
         hol > 0
           ? `// ${hol} holiday(s) skip Wednesdays; later dates shift forward.`
           : "// names sorted A→Z; add holidays to skip a sharing Wednesday.",
-        false
+        false,
       );
     } catch (e) {
       console.error(e);
@@ -269,7 +280,10 @@
 
   function openDialog() {
     if (!canEditRoster()) {
-      setStatus("Admin role required to edit roster. Login with an admin account.", true);
+      setStatus(
+        "Admin role required to edit roster. Login with an admin account.",
+        true,
+      );
       return;
     }
     if (!dialog || typeof dialog.showModal !== "function") {
@@ -280,7 +294,9 @@
     openBtn?.setAttribute("aria-expanded", "true");
     dialog.showModal();
     dialog.setAttribute("aria-hidden", "false");
-    requestAnimationFrame(() => dialog.classList.add("reminder-modal--visible"));
+    requestAnimationFrame(() =>
+      dialog.classList.add("reminder-modal--visible"),
+    );
     loadRosterIntoEditor().then(() => newInput?.focus());
   }
 
@@ -342,14 +358,14 @@
     if (!token) {
       setStatus(
         "Login required. Sign in with an admin account to save roster changes.",
-        true
+        true,
       );
       return;
     }
     if (isFileProtocolPage()) {
       setStatus(
         "Cannot save from file:// — use a local HTTP server (see loading error hint).",
-        true
+        true,
       );
       return;
     }
@@ -379,14 +395,14 @@
           ? ` (token custom:admin=${adminClaim})`
           : " (token has no custom:admin claim)";
         throw new Error(
-          `Admin role required${suffix}. If this should be admin, redeploy SAM so latest auth logic is live.`
+          `Admin role required${suffix}. If this should be admin, redeploy SAM so latest auth logic is live.`,
         );
       }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const hol = data.holidayCount ?? holidays.length;
       setStatus(
         `// saved ${data.count ?? names.length} names, ${hol} holiday(s)`,
-        false
+        false,
       );
       if (typeof window.__weeklySharingReloadSchedule === "function")
         await window.__weeklySharingReloadSchedule();
